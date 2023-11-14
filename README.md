@@ -1,13 +1,17 @@
-# Sample Hardhat Project
+# Friend Tech Fork
 
-This project demonstrates a basic Hardhat use case. It comes with a sample contract, a test for that contract, and a script that deploys that contract.
+This is a friend.tech fork contract. This works on bounding curve mechanism. It charges fee to users in a ERC20 token instead of ethers. 
 
-Try running some of the following tasks:
+## Fee
+Fee is being divided into 3 authorities. Initial fee is accumulated 10% in the smart contract. But you can change it by using the setter functions.
 
+## Fund token
+Fund token is the token that will be used to pay the fee. Instead of ethers. You can only set it once when you are deploying the contract. 
+**Note** Token decimals must be 18. Otherwise smart contract will not work in expected manner.
+
+
+## Commands
 ```shell
-npx hardhat help
-npx hardhat test
-REPORT_GAS=true npx hardhat test
-npx hardhat node
-npx hardhat run scripts/deploy.ts
+npm run compile
+npm run test
 ```
