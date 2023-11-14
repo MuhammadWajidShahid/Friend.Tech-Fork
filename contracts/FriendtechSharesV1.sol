@@ -4,19 +4,22 @@ pragma solidity >=0.8.2 <0.9.0;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 // File: contracts/FriendtechShares.sol
 
 // TODO: Events, final pricing model,
 
 contract FriendtechSharesV1 is Ownable {
+    using SafeERC20 for IERC20;
+
     IERC20 public immutable fundToken;
 
     address public protocolFeeDestination;
     address public protocolBFeeDestination;
-    uint256 public protocolFeePercent = 4 * 1e18; // 4% fee to party A
-    uint256 public protocolBFeePercent = 4 * 1e18; // 4% fee to party B
-    uint256 public subjectFeePercent = 2 * 1e18; // 2% fee to party C
+    uint256 public protocolFeePercent = 4 * 1e16; // 4% fee to party A
+    uint256 public protocolBFeePercent = 4 * 1e16; // 4% fee to party B
+    uint256 public subjectFeePercent = 2 * 1e16; // 2% fee to party C
 
     event Trade(
         address trader,
@@ -123,10 +126,7 @@ contract FriendtechSharesV1 is Ownable {
         uint256 protocolFee = (price * protocolFeePercent) / 1 ether;
         uint256 protocolBFee = (price * protocolBFeePercent) / 1 ether;
         uint256 subjectFee = (price * subjectFeePercent) / 1 ether;
-        require(
-            msg.value >= price + protocolFee + subjectFee,
-            "Insufficient payment"
-        );
+
         sharesBalance[sharesSubject][msg.sender] =
             sharesBalance[sharesSubject][msg.sender] +
             amount;
@@ -142,12 +142,18 @@ contract FriendtechSharesV1 is Ownable {
             subjectFee,
             supply + amount
         );
-        (bool success1, ) = protocolFeeDestination.call{value: protocolFee}("");
-        (bool success2, ) = protocolBFeeDestination.call{value: protocolBFee}(
-            ""
+
+        fundToken.safeTransferFrom(
+            msg.sender,
+            address(this),
+            price + protocolFee + protocolBFee + subjectFee
         );
-        (bool success3, ) = sharesSubject.call{value: subjectFee}("");
-        require(success1 && success2 && success3, "Unable to send funds");
+
+        fundToken.safeTransfer(protocolFeeDestination, protocolFee);
+
+        fundToken.safeTransfer(protocolBFeeDestination, protocolBFee);
+
+        fundToken.safeTransfer(sharesSubject, subjectFee);
     }
 
     function sellShares(address sharesSubject, uint256 amount) public payable {
@@ -176,17 +182,16 @@ contract FriendtechSharesV1 is Ownable {
             subjectFee,
             supply - amount
         );
-        (bool success1, ) = msg.sender.call{
-            value: price - protocolFee - subjectFee
-        }("");
-        (bool success2, ) = protocolFeeDestination.call{value: protocolFee}("");
-        (bool success3, ) = protocolBFeeDestination.call{value: protocolBFee}(
-            ""
+
+        fundToken.safeTransfer(
+            msg.sender,
+            price - protocolFee - protocolBFee - subjectFee
         );
-        (bool success4, ) = sharesSubject.call{value: subjectFee}("");
-        require(
-            success1 && success2 && success3 && success4,
-            "Unable to send funds"
-        );
+
+        fundToken.safeTransfer(protocolFeeDestination, protocolFee);
+
+        fundToken.safeTransfer(protocolBFeeDestination, protocolBFee);
+
+        fundToken.safeTransfer(sharesSubject, subjectFee);
     }
 }
